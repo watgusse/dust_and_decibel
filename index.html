@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Line Chart for Decibel and Dust</title>
+    <!-- Load Chart.js using traditional script tag -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        // Import Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-database.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3DFqsMvdDSpptJ9UoBK33ahg8fKkkmwI",
+            authDomain: "esp8266-52476.firebaseapp.com",
+            databaseURL: "https://esp8266-52476-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "esp8266-52476",
+            storageBucket: "esp8266-52476.appspot.com",
+            messagingSenderId: "305505967642",
+            appId: "1:305505967642:web:64348725bbd03fb5a27ba3",
+            measurementId: "G-8LDCZXQ9SC"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Fetch data and display in line chart
+        async function fetchDataAndDisplayChart() {
+            try {
+                const dbRef = ref(database);
+
+                // Fetch Decibel data
+                const decibelSnapshot = await get(child(dbRef, 'Decibel/round'));
+                const decibelData = decibelSnapshot.exists() ? decibelSnapshot.val() : null;
+
+                // Fetch Dust data
+                const dustSnapshot = await get(child(dbRef, 'Dust/round'));
+                const dustData = dustSnapshot.exists() ? dustSnapshot.val() : null;
+
+                if (decibelData || dustData) {
+                    const labels = [];
+                    const decibelValues = [];
+                    const dustValues = [];
+
+                    // Process Decibel data
+                    if (decibelData) {
+                        for (const day in decibelData) {
+                            if (decibelData.hasOwnProperty(day)) {
+                                for (const month in decibelData[day]) {
+                                    for (const year in decibelData[day][month]) {
+                                        for (const time in decibelData[day][month][year]) {
+                                            const entry = decibelData[day][month][year][time];
+                                            const value = parseFloat(entry.split("Decibel : ")[1]);
+                                            const label = `${day}/${month}/${year} ${time}`;
+
+                                            // Push data to labels and decibelValues
+                                            labels.push(label);
+                                            decibelValues.push(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Process Dust data
+                    if (dustData) {
+                        for (const day in dustData) {
+                            if (dustData.hasOwnProperty(day)) {
+                                for (const month in dustData[day]) {
+                                    for (const year in dustData[day][month]) {
+                                        for (const time in dustData[day][month][year]) {
+                                            const entry = dustData[day][month][year][time];
+                                            const value = parseFloat(entry.split("PM2.5 : ")[1]);
+
+                                            // Push data to dustValues (aligning labels)
+                                            const label = `${day}/${month}/${year} ${time}`;
+                                            if (!labels.includes(label)) {
+                                                labels.push(label); // Add label if not already present
+                                            }
+                                            dustValues.push(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Create Chart.js line chart
+                    const ctx = document.getElementById('myChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Decibel Levels',
+                                    data: decibelValues,
+                                    borderColor: 'rgba(75, 192, 192, 1)',
+                                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                    borderWidth: 1,
+                                    fill: false
+                                },
+                                {
+                                    label: 'PM2.5 Levels',
+                                    data: dustValues,
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                    borderWidth: 1,
+                                    fill: false
+                                }
+                            ]
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    type: 'category',
+                                    title: {
+                                        display: true,
+                                        text: 'Date & Time'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Values'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    console.log("No data available");
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // Call function to fetch data and display in chart
+        fetchDataAndDisplayChart();
+    </script>
+</head>
+<body>
+    <h1>Firebase Line Chart for Decibel and Dust</h1>
+    <canvas id="myChart" width="400" height="200"></canvas>
+</body>
+</html>
